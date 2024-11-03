@@ -2,14 +2,14 @@ import os
 
 from .base_llm import LLM
 
-try:
-    from openai import OpenAI
-except ImportError:
-    raise ImportError('Please install openai with "pip install openai"')
-
 
 class OpenAILLM(LLM):
     def __init__(self, model_name, api_key=None):
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise ImportError('Please install openai with "pip install openai"')
+
         if not api_key:
             api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
