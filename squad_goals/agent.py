@@ -1,5 +1,4 @@
 import datetime
-import json
 import re
 from copy import copy
 from typing import List, Dict, Tuple
@@ -7,12 +6,13 @@ from typing import List, Dict, Tuple
 from .llms.base_llm import LLM
 from .task import Task
 from .tools.base_tool import BaseTool, ReturnFinalAnswerTool
+from .utils import extract_json_from_string
 
 OBSERVATION_TOKEN = "Observation:"
 THOUGHT_TOKEN = "Thought:"
+NEXT_THOUGHT_TOKEN = "Next Thought:"
 PROMPT_TEMPLATE = """Today is {today} and you can use tools to get new information. 
 Respond to the user's input as best as you can using the following tools:
-
 
 {tool_description}
 
@@ -21,21 +21,23 @@ Thought: comment on what you want to do next.
 Action: the action to take, exactly one element of [{tool_names}]
 Action Input: the input to the action (must be a json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
 Observation: the result of the action
-Next Thought:
+Next Thought: (7 thoughts left)
 Thought: Now comment on what you want to do next.
 Action: the next action to take, exactly one element of [{tool_names}]
 Action Input: the input to the next action (must be a json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
 Observation: the result of the next action
 ... (this Thought/Action/Action Input/Observation repeats until you are sure of the answer)
-Next Thought:
+Next Thought: (6 thoughts left)
 Thought: Now comment on what you want to do next.
 Action: the next action to take, exactly one element of [{tool_names}]
 Action Input: the input to the next action (must be a json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
 Observation: the result of the next action
-Next Thought:
+Next Thought: (5 thoughts left)
 Thought: I can finally return the final answer
 Action: Return Final Answer Tool
 Action Input: The final answer to the task
+
+YOU MUST END WITH THE "Return Final Answer Tool" TO RETURN THE FINAL ANSWER TO THE USER and the final answer must be in the "Action Input" field.
 
 Begin:
 
@@ -65,6 +67,8 @@ class Agent():
         self.verbose = verbose
         self.debug = debug
         self.errors_encountered = []
+        self.tools_selected = []
+        self.tools_used = []
 
     @property
     def tool_description(self) -> str:
@@ -93,61 +97,45 @@ class Agent():
             num_loops += 1
             curr_prompt = prompt.format(previous_responses='\n'.join(previous_responses).strip())
             generated, tool, tool_input = self.decide_next_action(curr_prompt)
-            if self.verbose:
-                print('------')
-                print('CURR PROMPT')
-                print('------')
-                print(curr_prompt)
-                print('------')
+            if self.debug:
                 print('------')
                 print('RAW GENERATED')
                 print('------')
                 print(generated)
                 print('------')
+
+            self.tools_selected.append(tool)
+            if self.verbose and tool == 'Return Final Answer Tool':
+                print(f"Loop {num_loops}. Returning final answer")
+            elif self.verbose:
+                print(f"Loop {num_loops}. Choosing tool {tool} with input: {tool_input}")
             if tool not in self.tool_by_names:
                 raise ValueError(f"Unknown tool: {tool}")
-            if self.verbose:
-                print('tool_input', tool_input)
+            # Run the tool using the input
             try:
-                # Remove control characters
-                tool_input = re.sub(r'[\x00-\x1F\x7F]', '', tool_input)
-
-                # Attempt to load as JSON
-                tool_input = json.loads(tool_input)
-            except json.JSONDecodeError as e:
-                self.errors_encountered.append(e)
-                print(f"Error parsing tool input: {e}. JSON: {tool_input}")
+                tool_obj = self.tool_by_names[tool]
+                if not tool_input:
+                    tool_input = {}
+                tool_result = tool_obj.run(**tool_input)
+                self.tools_used.append(tool)
                 if self.debug:
-                    raise ValueError(f"Error parsing JSON: {e}")
-            try:
-                tool_result = self.tool_by_names[tool].run(**tool_input)
-                if self.verbose:
-                    print('tool_result', tool_result)
+                    print('tool_result', str(tool_result)[:200] + '...' if len(str(tool_result)) > 200 else str(tool_result))
             except Exception as e:
                 self.errors_encountered.append(e)
                 if self.debug:
-                    raise ValueError(f"Error from tool: {e}")
+                    print(f"Error running tool: {e}")
                 # if not debug, add this as the observation so the agent can try again
                 tool_result = f"Error from tool: {e}"
-            generated += f"\n{OBSERVATION_TOKEN} {tool_result}\nNext Thought:"
+            generated += f"\n{OBSERVATION_TOKEN} {tool_result}\nNext Thought: ({self.max_loops - num_loops} thoughts left)"
             self.ai_responses.append(generated.strip())
-            if self.verbose:
-                print('------')
-                print('PARSED GENERATED')
-                print('------')
-                print(generated)
-                print('------')
             previous_responses.append(generated)
             if tool == 'Return Final Answer Tool':
                 if self.verbose:
-                    print('------')
-                    print('FINAL PROMPT')
-                    print('------')
-                    print(curr_prompt)
-                    print('------')
+                    print(f"Task completed in {num_loops} loops. use \"print(task.output)\" to see the final answer")
                 task.raw_output = tool_result
                 task.completed = True
-                return tool_result
+                task.succeeded = True
+                return task
 
     def decide_next_action(self, prompt: str) -> str:
         generated = self.llm.generate(
@@ -155,25 +143,35 @@ class Agent():
             stop=self.stop_pattern)
 
         tool, tool_input = self._parse(generated)
-        if self.verbose:
-            print('tool', tool)
-            print('tool_input', tool_input)
+        if self.debug:
+            print('raw tool', tool)
+            print('raw tool_input', tool_input)
+        try:
+            # Remove control characters
+            tool_input = re.sub(r'[\x00-\x1F\x7F]', '', tool_input)
+            # Attempt to load as JSON
+            tool_input = extract_json_from_string(tool_input)
+        except Exception as e:
+            self.errors_encountered.append(e)
+            if self.verbose:
+                print(f"\tError loading JSON from tool_input: {e}")
+            tool_input = None
         return generated, tool, tool_input
 
     def _parse(self, generated: str) -> Tuple[str, str]:
-        # if 'Return Final Answer Tool' in generated:
-        #     final_answer = generated.split('Action Input:')[-1].strip()
-        #     return "Return Final Answer Tool", final_answer
+        if self.debug:
+            print('generated', generated)
         regex = r"Action: [\[]?(.*?)[\]]?[\n]*Action Input:[\s]*(.*)"
         match = re.search(regex, generated, re.DOTALL)
         if not match:
             self.errors_encountered.append(
                 ValueError(f"Output of LLM is not parsable for next tool use: `{generated}`"))
             if self.debug:
-                raise ValueError(f"Output of LLM is not parsable for next tool use: `{generated}`")
+                print(f"Error parsing generated output: {generated}")
             # if not debug, add this as the observation so the agent can try again
-            tool = F'TOOL ERROR. MAKE SURE TO VERBTAIM STATE A TOOL NAME FROM THE LIST: {self.tool_names}'
+            tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.tool_names}. If you are trying to end the conversation, use the "Return Final Answer Tool"'
             tool_input = tool
-        tool = match.group(1).strip()
-        tool_input = match.group(2)
+        else:
+            tool = match.group(1).strip()
+            tool_input = match.group(2).split(OBSERVATION_TOKEN)[0].split(NEXT_THOUGHT_TOKEN)[0].strip()
         return tool, tool_input.strip(" ").strip('"')
