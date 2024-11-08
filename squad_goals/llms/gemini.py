@@ -1,12 +1,18 @@
 import os
 
-import google.generativeai as genai
+
 
 from .base_llm import LLM
 
 
 class GeminiLLM(LLM):
     def __init__(self, model_name="gemini-1.5-flash", api_key=None):
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            raise ImportError(
+                "`google-generativeai` package not found, please run `pip install google-generativeai`"
+            )
         if not api_key:
             api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:

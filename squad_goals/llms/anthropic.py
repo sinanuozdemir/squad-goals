@@ -1,12 +1,16 @@
 import os
 
-from anthropic import Anthropic
-
 from .base_llm import LLM
 
 
 class AnthropicLLM(LLM):
     def __init__(self, model_name="claude-3-opus-20240229", api_key=None):
+        try:
+            from anthropic import Anthropic
+        except ImportError:
+            raise ImportError(
+                "`anthropic` package not found, please run `pip install anthropic`"
+            )
         if not api_key:
             api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
