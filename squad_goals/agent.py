@@ -54,7 +54,8 @@ class Agent():
                  max_loops: int = 5,
                  stop_pattern: List[str] = [f'\n{OBSERVATION_TOKEN}', f'\n\t{OBSERVATION_TOKEN}'],
                  verbose: bool = False,
-                 debug: bool = False
+                 debug: bool = False,
+                 tool_eval_mode: bool = False
                  ):
         self.llm = llm
         self.tools = tools
@@ -69,6 +70,7 @@ class Agent():
         self.errors_encountered = []
         self.tools_selected = []
         self.tools_used = []
+        self.tool_eval_mode = tool_eval_mode
 
     @property
     def tool_description(self) -> str:
@@ -116,7 +118,10 @@ class Agent():
                 tool_obj = self.tool_by_names[tool]
                 if not tool_input:
                     tool_input = {}
-                tool_result = tool_obj.run(**tool_input)
+                if self.tool_eval_mode:
+                    tool_result = 'Tool evaluation mode is on. No tool will be run.'
+                else:
+                    tool_result = tool_obj.run(**tool_input)
                 self.tools_used.append(tool)
                 if self.debug:
                     print('tool_result', str(tool_result)[:200] + '...' if len(str(tool_result)) > 200 else str(tool_result))
