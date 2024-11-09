@@ -1,7 +1,5 @@
 import os
 
-
-
 from .base_llm import LLM
 
 
@@ -34,7 +32,8 @@ class GeminiLLM(LLM):
             raise ValueError("The last message in the conversation history must be from the user.")
 
         # Convert messages to the format expected by the SDK
-        history = [{"role": 'model' if msg['role'] == 'assistant' else msg['role'], "parts": [msg['content']]} for msg in messages[:-1]]
+        history = [{"role": 'model' if msg['role'] == 'assistant' else msg['role'], "parts": [msg['content']]} for msg
+                   in messages[:-1]]
 
         # Start a chat session with the existing history
         chat = self.client.start_chat(history=history)

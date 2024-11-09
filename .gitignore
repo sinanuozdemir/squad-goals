@@ -1,3 +1,5 @@
+secrets/*
+
 # IDE configurations
 .idea/
 
