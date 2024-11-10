@@ -15,6 +15,7 @@ class GeminiLLM(LLM):
             api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("Gemini API key is required.")
+        import google.generativeai as genai
         genai.configure(api_key=api_key)
         self.model_name = model_name
         self.client = genai.GenerativeModel(model_name)
