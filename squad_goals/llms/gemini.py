@@ -15,7 +15,6 @@ class GeminiLLM(LLM):
             api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("Gemini API key is required.")
-        import google.generativeai as genai
         genai.configure(api_key=api_key)
         self.model_name = model_name
         self.client = genai.GenerativeModel(model_name)
@@ -29,6 +28,7 @@ class GeminiLLM(LLM):
         :param kwargs: Additional arguments to pass to the API.
         :return: Generated text from the Gemini model.
         """
+        import google.generativeai as genai
         if messages[-1]['role'] != 'user':
             raise ValueError("The last message in the conversation history must be from the user.")
 
