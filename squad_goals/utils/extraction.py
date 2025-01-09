@@ -4,6 +4,8 @@ import re
 
 def extract_json_from_string(input_string):
     # Use regex to find the JSON part
+    input_string = re.sub(r'[\x00-\x1F\x7F]', '', input_string)  # Remove control characters
+
     match = re.search(r'({.*?})', input_string, re.DOTALL)
     if match:
         json_str = match.group(1)

@@ -2,14 +2,15 @@ import datetime
 import re
 from copy import copy
 from typing import List, Dict, Tuple
+from typing import Optional
 
+from squad_goals.conversation.models import Conversation, Message
 from .llms.base_llm import LLM
 from .task import Task
 from .tools.base_tool import BaseTool, ReturnFinalAnswerTool
 from .utils import extract_json_from_string
 
 OBSERVATION_TOKEN = "Observation:"
-THOUGHT_TOKEN = "Thought:"
 NEXT_THOUGHT_TOKEN = "Next Thought:"
 PROMPT_TEMPLATE = """Today is {today} and you can use tools to get new information. 
 Respond to the user's input as best as you can using the following tools:
@@ -49,28 +50,35 @@ First Thought:
 
 
 class Agent():
-    def __init__(self, llm: LLM, tools: List[BaseTool],
+    def __init__(self, llm: LLM, tools: List[BaseTool] = [],
                  prompt_template: str = PROMPT_TEMPLATE,
                  max_loops: int = 5,
-                 stop_pattern: List[str] = [f'\n{OBSERVATION_TOKEN}', f'\n\t{OBSERVATION_TOKEN}'],
                  verbose: bool = False,
                  debug: bool = False,
-                 tool_eval_mode: bool = False
+                 tool_eval_mode: bool = False,
+                 conversation: Optional[Conversation] = None,
+                 name: str = 'Agent',
+                 use_conversation: bool = False
                  ):
-        self.llm = llm
-        self.tools = tools
-        if not any(isinstance(tool, ReturnFinalAnswerTool) for tool in tools):
+        self.llm = llm  # Language model we are using
+        self.tools = tools  # List of tools the agent can use
+        if not any(isinstance(tool, ReturnFinalAnswerTool) for tool in tools):  # Ensure we have a final answer tool
             tools.append(ReturnFinalAnswerTool())
-        self.prompt_template = copy(prompt_template)
-        self.max_loops = max_loops
-        self.stop_pattern = stop_pattern
-        self.ai_responses = []
-        self.verbose = verbose
-        self.debug = debug
-        self.errors_encountered = []
-        self.tools_selected = []
-        self.tools_used = []
-        self.tool_eval_mode = tool_eval_mode
+        self.prompt_template = copy(prompt_template)  # Template for the prompt
+        self.max_loops = max_loops  # Maximum number of loops to run
+        self.ai_responses = []  # List of responses from the AI
+        self.verbose = verbose  # Verbose mode
+        self.debug = debug  # Debug mode
+        self.errors_encountered = []  # List of errors encountered
+        self.tools_selected = []  # List of tools selected
+        self.tools_used = []  # List of tools used
+        self.tool_eval_mode = tool_eval_mode  # If True, the tools will not be run
+        self.stop_pattern = [f'\n{OBSERVATION_TOKEN}', f'\n\t{OBSERVATION_TOKEN}']  # Stop pattern for the LLM
+        self.conversation = conversation  # Conversation object
+        if not self.conversation:
+            self.conversation = Conversation(messages=[])
+        self.name = name  # Name of the agent
+        self.use_conversation = use_conversation  # If True, the agent will use the conversation object
 
     @property
     def tool_description(self) -> str:
@@ -112,7 +120,8 @@ class Agent():
             elif self.verbose:
                 print(f"Loop {num_loops}. Choosing tool {tool} with input: {tool_input}")
             if tool not in self.tool_by_names:
-                raise ValueError(f"Unknown tool: {tool}")
+                if self.debug:
+                    raise ValueError(f"Unknown tool: {tool}")
             # Run the tool using the input
             try:
                 tool_obj = self.tool_by_names[tool]
@@ -124,7 +133,8 @@ class Agent():
                     tool_result = tool_obj.run(**tool_input)
                 self.tools_used.append(tool)
                 if self.debug:
-                    print('tool_result', str(tool_result)[:200] + '...' if len(str(tool_result)) > 200 else str(tool_result))
+                    print('tool_result',
+                          str(tool_result)[:200] + '...' if len(str(tool_result)) > 200 else str(tool_result))
             except Exception as e:
                 self.errors_encountered.append(e)
                 if self.debug:
@@ -140,11 +150,17 @@ class Agent():
                 task.raw_output = tool_result
                 task.completed = True
                 task.succeeded = True
+                prompt_final = prompt.format(previous_responses='\n'.join(previous_responses).strip())
+                if self.use_conversation:
+                    self.conversation.messages.append(Message(content=prompt_final, source=self.name, role='assistant'))
                 return task
 
     def decide_next_action(self, prompt: str) -> str:
+        messages = [{'role': 'user', 'content': prompt}]
+        if self.conversation and self.use_conversation:
+            messages = self.conversation.messages_as_dicts() + messages
         generated = self.llm.generate(
-            [{'role': 'user', 'content': prompt}],
+            messages,
             stop=self.stop_pattern)
 
         tool, tool_input = self._parse(generated)
@@ -152,15 +168,12 @@ class Agent():
             print('raw tool', tool)
             print('raw tool_input', tool_input)
         try:
-            # Remove control characters
-            tool_input = re.sub(r'[\x00-\x1F\x7F]', '', tool_input)
-            # Attempt to load as JSON
-            tool_input = extract_json_from_string(tool_input)
+            tool_input = extract_json_from_string(tool_input)  # Attempt to load as JSON
         except Exception as e:
-            self.errors_encountered.append(e)
+            self.errors_encountered.append(e)  # Add error to the list of errors
             if self.verbose:
                 print(f"\tError loading JSON from tool_input: {e}")
-            tool_input = None
+            tool_input = None  # Set to None if we can't load as JSON
         return generated, tool, tool_input
 
     def _parse(self, generated: str) -> Tuple[str, str]:
@@ -171,7 +184,7 @@ class Agent():
         if not match:
             self.errors_encountered.append(
                 ValueError(f"Output of LLM is not parsable for next tool use: `{generated}`"))
-            if self.debug:
+            if self.verbose:
                 print(f"Error parsing generated output: {generated}")
             # if not debug, add this as the observation so the agent can try again
             tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.tool_names}. If you are trying to end the conversation, use the "Return Final Answer Tool"'

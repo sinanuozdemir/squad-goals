@@ -4,7 +4,7 @@ from .base_llm import LLM
 
 
 class AnthropicLLM(LLM):
-    def __init__(self, model_name="claude-3-opus-20240229", api_key=None):
+    def __init__(self, model_name="claude-3-opus-20240229", api_key=None, **kwargs):
         try:
             from anthropic import Anthropic
         except ImportError:
@@ -18,8 +18,9 @@ class AnthropicLLM(LLM):
 
         self.model_name = model_name
         self.client = Anthropic(api_key=api_key)
+        super().__init__(**kwargs)
 
-    def generate(self, messages, max_tokens=1024, **kwargs):
+    def _generate(self, messages, max_tokens=1024, **kwargs):
         """
         Sends a prompt to Claude and returns the generated response.
         :param messages: List of dictionaries, where each dictionary represents a message with 'role' and 'content'.

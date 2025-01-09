@@ -1,11 +1,13 @@
 # base class for tools
 import inspect
 import io
+import json
 from contextlib import redirect_stdout
 from typing import Any
-import json
+
+
 class BaseTool:
-    def __init__(self, name: str, description: str, **kwargs):
+    def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
 

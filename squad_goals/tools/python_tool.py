@@ -3,11 +3,6 @@ from io import StringIO
 
 from .base_tool import BaseTool
 
-try:
-    from serpapi import GoogleSearch
-except ImportError:
-    raise ImportError('Please install serpapi with "pip install google-search-results"')
-
 
 class PythonREPLTool(BaseTool):
     def __init__(self, **kwargs):

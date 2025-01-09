@@ -4,7 +4,7 @@ from .base_llm import LLM
 
 
 class OpenAILLM(LLM):
-    def __init__(self, model_name, api_key=None):
+    def __init__(self, model_name='gpt-4o', api_key=None, **kwargs):
         try:
             from openai import OpenAI
         except ImportError:
@@ -16,8 +16,9 @@ class OpenAILLM(LLM):
             raise ValueError("API key is required")
         self.model_name = model_name
         self.openai = OpenAI(api_key=api_key)
+        super().__init__(**kwargs)
 
-    def generate(self, messages, **kwargs):
+    def _generate(self, messages, **kwargs):
         return self.openai.chat.completions.create(
             model=self.model_name,
             messages=messages,

@@ -1,8 +1,3 @@
-# SerpAPI tool
-try:
-    from serpapi import GoogleSearch
-except ImportError:
-    raise ImportError('Please install serpapi with "pip install google-search-results"')
 import re
 from copy import copy
 

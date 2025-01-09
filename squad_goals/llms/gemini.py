@@ -4,7 +4,7 @@ from .base_llm import LLM
 
 
 class GeminiLLM(LLM):
-    def __init__(self, model_name="gemini-1.5-flash", api_key=None):
+    def __init__(self, model_name="gemini-1.5-flash", api_key=None, **kwargs):
         try:
             import google.generativeai as genai
         except ImportError:
@@ -18,8 +18,9 @@ class GeminiLLM(LLM):
         genai.configure(api_key=api_key)
         self.model_name = model_name
         self.client = genai.GenerativeModel(model_name)
+        super().__init__(**kwargs)
 
-    def generate(self, messages, max_output_tokens=1024, stop=None, **kwargs):
+    def _generate(self, messages, max_output_tokens=1024, stop=None, **kwargs):
         """
         Sends a prompt to the Gemini model and returns the generated response.
         :param messages: List of dictionaries, each with 'role' and 'content'.
