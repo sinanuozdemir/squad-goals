@@ -1,7 +1,7 @@
 
 # Squad Goals
 
-**Squad Goals** is an educational Python package designed to manage goals, tasks, and agents while integrating with large language models and tools like SerpAPI. The goal here is to show off how simple it can be to make a basic Agent framework.
+Originally written for a [lecture on Agents for O'Reilly](https://learning.oreilly.com/live-events/ai-agents-a-z/0642572007604/), **Squad Goals** is an educational Python package designed to manage goals, tasks, and agents while integrating with large language models and tools like SerpAPI. The goal here is to show off how simple it can be to make a basic Agent framework.
 
 ## Installation
 
