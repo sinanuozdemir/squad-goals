@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 from copy import copy
 from typing import List, Dict, Tuple
@@ -186,7 +187,7 @@ class Agent():
                 tool_input = extract_json_from_string(generated)
                 if 'final_answer' in tool_input:
                     print(f"Final answer detected: {tool_input['final_answer']}")
-                    return 'Return Final Answer Tool', tool_input
+                    return 'Return Final Answer Tool', json.dumps(tool_input)
             except:
                 pass
             self.errors_encountered.append(
