@@ -24,3 +24,5 @@ def extract_json_from_string(input_string):
             return None
     else:
         return None
+
+{"final_answer": "{\"company_name\": \"Alaska Airlines\", \"job_title\": \"Director, Audit Analytics and Special Projects\", \"linkedin_url\": \"https://www.linkedin.com/in/robinbyong\"}"}

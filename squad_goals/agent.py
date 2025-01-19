@@ -20,23 +20,23 @@ Respond to the user's input as best as you can using the following tools:
 First Thought:
 Thought: comment on what you want to do next.
 Action: the action to take, exactly one element of [{tool_names}]
-Action Input: the input to the action (must be a json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
+Action Input: the input to the action (must be a single line json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
 Observation: the result of the action
 Next Thought: (7 thoughts left)
 Thought: Now comment on what you want to do next.
 Action: the next action to take, exactly one element of [{tool_names}]
-Action Input: the input to the next action (must be a json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
+Action Input: the input to the next action (must be a single line json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
 Observation: the result of the next action
 ... (this Thought/Action/Action Input/Observation repeats until you are sure of the answer)
 Next Thought: (6 thoughts left)
 Thought: Now comment on what you want to do next.
 Action: the next action to take, exactly one element of [{tool_names}]
-Action Input: the input to the next action (must be a json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
+Action Input: the input to the next action (must be a single line json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
 Observation: the result of the next action
 Next Thought: (5 thoughts left)
 Thought: I can finally return the final answer
 Action: Return Final Answer Tool
-Action Input: The final answer to the task
+Action Input: {{{{"final_answer": "single line final answer to return to the user\n\nYou can add more information here if you want to."}}}}
 
 YOU MUST END WITH THE "Return Final Answer Tool" TO RETURN THE FINAL ANSWER TO THE USER and the final answer must be in the "Action Input" field.
 
@@ -117,7 +117,7 @@ class Agent():
             self.tools_selected.append(tool)
             if self.verbose and tool == 'Return Final Answer Tool':
                 print(f"Loop {num_loops}. Returning final answer")
-            elif self.verbose:
+            if self.verbose:
                 print(f"Loop {num_loops}. Choosing tool {tool} with input: {tool_input}")
             if tool not in self.tool_by_names:
                 if self.debug:
@@ -179,9 +179,16 @@ class Agent():
     def _parse(self, generated: str) -> Tuple[str, str]:
         if self.debug:
             print('generated', generated)
-        regex = r"Action: [\[]?(.*?)[\]]?[\n]*Action Input:[\s]*(.*)"
+        regex = r"Action:\s*\[?(.*?)\]?\s*[\r\n]+Action Input:\s*([\s\S]+)"
         match = re.search(regex, generated, re.DOTALL)
-        if not match:
+        if not match:  # special case: generated is json loadable and has the "final_answer" key, then it is the final answer
+            try:
+                tool_input = extract_json_from_string(generated)
+                if 'final_answer' in tool_input:
+                    print(f"Final answer detected: {tool_input['final_answer']}")
+                    return 'Return Final Answer Tool', tool_input
+            except:
+                pass
             self.errors_encountered.append(
                 ValueError(f"Output of LLM is not parsable for next tool use: `{generated}`"))
             if self.verbose:

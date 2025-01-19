@@ -51,7 +51,7 @@ class ReturnFinalAnswerTool(BaseTool):
     def __init__(self):
         super().__init__(
             "Return Final Answer Tool",
-            "This tool returns the final answer to the task. Pass all inputs as {{\"final_answer\": \"your answer\"}}"
+            "This tool returns the final answer to the task. Pass all inputs as {{\"final_answer\": \"your answer\"}}.",
         )
 
     def run(self, final_answer: Any) -> Any:
