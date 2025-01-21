@@ -18,11 +18,9 @@ def extract_json_from_string(input_string):
     match = re.search(r'([\[{].*?[\]}])', input_string, re.DOTALL)
     if match:
         try:
-            # Load the dictionary or list as a dictionary
+            print('using eval')
             return eval(match.group(1))
         except Exception:
             return None
     else:
         return None
-
-{"final_answer": "{\"company_name\": \"Alaska Airlines\", \"job_title\": \"Director, Audit Analytics and Special Projects\", \"linkedin_url\": \"https://www.linkedin.com/in/robinbyong\"}"}

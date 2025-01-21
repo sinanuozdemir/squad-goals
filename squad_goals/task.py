@@ -23,7 +23,9 @@ class Task:
             parsed_output = re.sub(r'\\', '', parsed_output)
             # Extract JSON-like content between brackets
             json_matches = re.findall(r'\[\s*(?:[^\[\]]*?)\]', parsed_output, re.DOTALL)
-
+            if not json_matches:
+                print(f"Could not find JSON in output: {parsed_output}")
+                return
             # Assume largest JSON is the most complete one
             largest_json = max(json_matches, key=len)
 
