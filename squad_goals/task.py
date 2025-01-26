@@ -1,5 +1,4 @@
-import json
-import re
+from .utils import extract_json_from_string
 
 
 class Task:
@@ -19,18 +18,7 @@ class Task:
         if not self.raw_output:
             return
         if self.output_format == 'json':
-            parsed_output = re.sub(r'[\x00-\x1F\x7F]', '', self.raw_output)
-            parsed_output = re.sub(r'\\', '', parsed_output)
-            # Extract JSON-like content between brackets
-            json_matches = re.findall(r'\[\s*(?:[^\[\]]*?)\]', parsed_output, re.DOTALL)
-            if not json_matches:
-                print(f"Could not find JSON in output: {parsed_output}")
-                return
-            # Assume largest JSON is the most complete one
-            largest_json = max(json_matches, key=len)
-
-            # Load as JSON
-            self.parsed_output = json.loads(largest_json)
+            self.parsed_output = extract_json_from_string(self.raw_output)  # Load as JSON
         elif self.output_format == 'text':
             self.parsed_output = self.raw_output
         else:

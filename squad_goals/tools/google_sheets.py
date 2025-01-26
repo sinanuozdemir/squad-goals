@@ -60,3 +60,22 @@ class GoogleSpreadsheetTool(BaseTool):
         :return: The response from the Sheets API.
         """
         return self.append_data(data)
+
+    # method to add a list of data at a specific range
+    def add_data_at_range(self, data: List[List[str]], range_name: str):
+        """
+        Appends data to the end of the sheet.
+        :param data: List of lists, where each inner list represents a row.
+        :param range_name: The range to add the data to, e.g. "Sheet1!A1"
+        """
+        body = {
+            'values': data
+        }
+        result = self.service.spreadsheets().values().append(
+            spreadsheetId=self.spreadsheet_id,
+            range=range_name,
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body=body
+        ).execute()
+        return result

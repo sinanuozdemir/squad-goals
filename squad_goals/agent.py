@@ -13,6 +13,8 @@ from .utils import extract_json_from_string
 
 OBSERVATION_TOKEN = "Observation:"
 NEXT_THOUGHT_TOKEN = "Next Thought:"
+param_value_dict = json.dumps({"param": "value"})
+final_answer_dict = json.dumps({"final_answer": "the final answer to return to the user"})
 PROMPT_TEMPLATE = """Today is {today} and you can use tools to get new information. 
 Respond to the user's input as best as you can using the following tools:
 
@@ -21,29 +23,35 @@ Respond to the user's input as best as you can using the following tools:
 First Thought:
 Thought: comment on what you want to do next.
 Action: the action to take, exactly one element of [{tool_names}]
-Action Input: the input to the action (must be a single line json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
+Action Input: the input to the action (must be a single line json loadable dictionary of parameters e.g. {param_value_dict})
 Observation: the result of the action
 Next Thought: (7 thoughts left)
 Thought: Now comment on what you want to do next.
 Action: the next action to take, exactly one element of [{tool_names}]
-Action Input: the input to the next action (must be a single line json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
+Action Input: the input to the next action (must be a single line json loadable dictionary of parameters e.g. {param_value_dict})
 Observation: the result of the next action
 ... (this Thought/Action/Action Input/Observation repeats until you are sure of the answer)
 Next Thought: (6 thoughts left)
 Thought: Now comment on what you want to do next.
 Action: the next action to take, exactly one element of [{tool_names}]
-Action Input: the input to the next action (must be a single line json loadable dictionary of parameters e.g. {{{{"param": "value"}}}})
+Action Input: the input to the next action (must be a single line json loadable dictionary of parameters e.g. {param_value_dict})
 Observation: the result of the next action
 Next Thought: (5 thoughts left)
 Thought: I can finally return the final answer
 Action: Return Final Answer Tool
-Action Input: {{{{"final_answer": "single line final answer to return to the user\n\nYou can add more information here if you want to."}}}}
+Action Input: {final_answer_dict}
 
 YOU MUST END WITH THE "Return Final Answer Tool" TO RETURN THE FINAL ANSWER TO THE USER and the final answer must be in the "Action Input" field.
 
 Begin:
 
+##########
+START GOAL
+##########
 {goal}
+##########
+END GOAL
+##########
 
 First Thought:
 {previous_responses}
@@ -102,11 +110,18 @@ class Agent():
             tool_description=self.tool_description,
             tool_names=self.tool_names,
             goal=task.goal,
-            previous_responses='{previous_responses}'
+            previous_responses='{previous_responses}',
+            final_answer_dict='{final_answer_dict}',
+            param_value_dict='{param_value_dict}'
         )
         while num_loops < self.max_loops:
             num_loops += 1
-            curr_prompt = prompt.format(previous_responses='\n'.join(previous_responses).strip())
+            curr_prompt = prompt.replace(
+                '{previous_responses}', '\n'.join(previous_responses).strip(),
+            ).replace(
+                '{final_answer_dict}', final_answer_dict
+            ).replace('{param_value_dict}', param_value_dict
+                      )
             generated, tool, tool_input = self.decide_next_action(curr_prompt)
             if self.debug:
                 print('------')
@@ -139,7 +154,7 @@ class Agent():
             except Exception as e:
                 self.errors_encountered.append(e)
                 if self.debug:
-                    print(f"Error running tool: {e}")
+                    print(f"Error running tool: {e}. tool_input: {tool_input}")
                 # if not debug, add this as the observation so the agent can try again
                 tool_result = f"Error from tool: {e}"
             generated += f"\n{OBSERVATION_TOKEN} {tool_result}\nNext Thought: ({self.max_loops - num_loops} thoughts left)"
@@ -151,7 +166,11 @@ class Agent():
                 task.raw_output = tool_result
                 task.completed = True
                 task.succeeded = True
-                prompt_final = prompt.format(previous_responses='\n'.join(previous_responses).strip())
+                prompt_final = prompt.replace(
+                    '{previous_responses}', '\n'.join(previous_responses).strip()).replace(
+                    '{final_answer_dict}', final_answer_dict).replace(
+                    '{param_value_dict}', param_value_dict
+                )
                 if self.use_conversation:
                     self.conversation.messages.append(Message(content=prompt_final, source=self.name, role='assistant'))
                 return task
@@ -169,7 +188,9 @@ class Agent():
             print('raw tool', tool)
             print('raw tool_input', tool_input)
         try:
+            print('Before loading JSON')
             tool_input = extract_json_from_string(tool_input)  # Attempt to load as JSON
+            print('After loading JSON', tool_input.keys())
         except Exception as e:
             self.errors_encountered.append(e)  # Add error to the list of errors
             if self.verbose:
@@ -180,9 +201,10 @@ class Agent():
     def _parse(self, generated: str) -> Tuple[str, str]:
         if self.debug:
             print('generated', generated)
-        regex = r"Action:\s*\[?(.*?)\]?\s*[\r\n]+Action Input:\s*([\s\S]+)"
+        regex = r"Action:\s*\[?(.*?)\]?\s*[\r\n]+Action Input:.*?({[^{}]*({[^{}]*})*[^{}]*})"
         match = re.search(regex, generated, re.DOTALL)
         if not match:  # special case: generated is json loadable and has the "final_answer" key, then it is the final answer
+            print('No match')
             try:
                 tool_input = extract_json_from_string(generated)
                 if 'final_answer' in tool_input:
@@ -198,6 +220,9 @@ class Agent():
             tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.tool_names}. If you are trying to end the conversation, use the "Return Final Answer Tool"'
             tool_input = tool
         else:
+            print('Match')
+            # print all groups:
             tool = match.group(1).strip()
             tool_input = match.group(2).split(OBSERVATION_TOKEN)[0].split(NEXT_THOUGHT_TOKEN)[0].strip()
+            print('please...', tool, tool_input)
         return tool, tool_input.strip(" ").strip('"')

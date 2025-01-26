@@ -16,18 +16,20 @@ class Plan(BaseModel):
     def is_complete(self) -> bool:
         return len(self.steps) == len(self.results)
 
-    @property
-    def formatted_plan(self) -> str:
+    def formatted_plan(self, include_goal=True) -> str:
         ''' return the plan as a formatted string including the goal and steps '''
-        return f'Goal: {self.goal}\n' + '\n'.join(
-            [f'{step} -> {result}' for step, result in zip(self.steps, self.results) if result])
+        if include_goal:
+            return f'Goal: {self.goal}\n' + '\n'.join(
+                [f'{step} -> {result}' for step, result in zip(self.steps, self.results) if result])
+        else:
+            return '\n'.join([f'{step} -> {result}' for step, result in zip(self.steps, self.results) if result])
 
 
 class Workflow(BaseModel):
     plan: Plan
     goal: str
     agent: Any  # TODO eventually multi agents here
-    tasks: List[Any] = []  # TODO eventually multi tasks here
+    tasks: List[Any] = []
     verbose: bool = False
 
     def _extract_variables(self, text):
@@ -55,16 +57,19 @@ class Workflow(BaseModel):
             if self.verbose:
                 print(f"Next Step: {next_step}")
 
-            plan_formatted = self.plan.formatted_plan
+            on_last_step = len(self.plan.results) == (len(self.plan.steps) - 1)
+            print(f"on_last_step: {on_last_step}")
+            plan_formatted = self.plan.formatted_plan(include_goal=on_last_step)
             plan_formatted = self._replace_variables(plan_formatted, **variables)
             if self.verbose:
                 print(f"Formatted Plan: {plan_formatted}")
 
             step_task = Task(
                 name=f"Execute Step {len(self.plan.results) + 1}",
-                goal=f'Given the following plan, please execute a single part of that plan. The plan is: {plan_formatted}, and the step to execute is: """{next_step}""". Only return the output of this step.',
+                goal=f'You are executing a SINGLE step of the following plan.\n\n<plan>\n{plan_formatted}\n</plan>\n\nThe step you are now executing is:\n\n<step>\n{next_step}\n</step>\n\nExecute only the given step of the plan and nothing more.',
                 output_format='text'
             )
+            self.tasks.append(step_task)
             self.agent.run(step_task)
             step_result = step_task.output
             self.plan.results.append(step_result)
@@ -82,7 +87,7 @@ class WorkflowTool(BaseTool):
         kwargs.update(
             {
                 'name': workflow.goal,
-                'description': f"Runs a workflow with the following plan: {workflow.plan.formatted_plan}"
+                'description': f"Runs a workflow with the following plan: {workflow.plan.formatted_plan()}"
             }
         )
         super().__init__(**kwargs)
