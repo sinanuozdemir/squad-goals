@@ -202,7 +202,6 @@ class Agent():
         regex = r"Action:\s*\[?(.*?)\]?\s*[\r\n]+Action Input:.*?({[^{}]*({[^{}]*})*[^{}]*})"
         match = re.search(regex, generated, re.DOTALL)
         if not match:  # special case: generated is json loadable and has the "final_answer" key, then it is the final answer
-            print('No match')
             try:
                 tool_input = extract_json_from_string(generated)
                 if 'final_answer' in tool_input:
