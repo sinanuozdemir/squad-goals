@@ -58,7 +58,6 @@ class Workflow(BaseModel):
                 print(f"Next Step: {next_step}")
 
             on_last_step = len(self.plan.results) == (len(self.plan.steps) - 1)
-            print(f"on_last_step: {on_last_step}")
             plan_formatted = self.plan.formatted_plan(include_goal=on_last_step)
             plan_formatted = self._replace_variables(plan_formatted, **variables)
             if self.verbose:

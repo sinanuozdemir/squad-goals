@@ -188,9 +188,7 @@ class Agent():
             print('raw tool', tool)
             print('raw tool_input', tool_input)
         try:
-            print('Before loading JSON')
             tool_input = extract_json_from_string(tool_input)  # Attempt to load as JSON
-            print('After loading JSON', tool_input.keys())
         except Exception as e:
             self.errors_encountered.append(e)  # Add error to the list of errors
             if self.verbose:
@@ -220,9 +218,6 @@ class Agent():
             tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.tool_names}. If you are trying to end the conversation, use the "Return Final Answer Tool"'
             tool_input = tool
         else:
-            print('Match')
-            # print all groups:
             tool = match.group(1).strip()
             tool_input = match.group(2).split(OBSERVATION_TOKEN)[0].split(NEXT_THOUGHT_TOKEN)[0].strip()
-            print('please...', tool, tool_input)
         return tool, tool_input.strip(" ").strip('"')

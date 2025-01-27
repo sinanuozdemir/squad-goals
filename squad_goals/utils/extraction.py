@@ -8,7 +8,6 @@ def extract_json_from_string(input_string):
 
     match = re.search(r'.*?({[^{}]*({[^{}]*})*[^{}]*})', input_string, re.DOTALL)
     if match:
-        print('using json')
         json_str = match.group(1)
         try:
             # Load the JSON string as a dictionary
@@ -19,7 +18,6 @@ def extract_json_from_string(input_string):
     match = re.search(r'([\[{].*?[\]}])', input_string, re.DOTALL)
     if match:
         try:
-            print('using eval')
             return eval(match.group(1))
         except Exception:
             return None

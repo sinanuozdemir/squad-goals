@@ -127,7 +127,6 @@ class FirecrawlSearchTool(BaseTool):
         if 'linkedin.co' in website_url and what_to_return == 'markdown':
             if os.getenv('RAPID_API_KEY') is None:
                 raise ValueError("RAPID_API_KEY environment variable is required for LinkedIn scraping")
-            print("Scraping LinkedIn...")
             return scrape_linkedin(website_url)
         response = self.firecrawl.scrape_url(
             website_url, params={'formats': ['markdown', 'links']}
