@@ -36,5 +36,6 @@ class LLM:
                     'prompt': json.dumps(messages),
                     'response': raw_text_response,
                     'inference_params': class_vars,
+                    'model': self.__class__.__name__
                 }).execute()
         return raw_text_response

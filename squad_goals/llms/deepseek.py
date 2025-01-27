@@ -19,7 +19,7 @@ class DeepSeekLLM(LLM):
         super().__init__(**kwargs)
 
     def _generate(self, messages, **kwargs):
-        return self.openai.chat.completions.create(
+        return self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
             **kwargs
