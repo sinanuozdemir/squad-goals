@@ -4,13 +4,16 @@ import os
 
 class LLM:
 
-    def __init__(self, warehouse=None):
+    def __init__(self, warehouse=None, static_generation_kwargs=None):
         self.warehouse = warehouse
+        self.static_generation_kwargs = static_generation_kwargs or {}
 
     def _generate(self, messages, **kwargs):
         raise NotImplementedError("generate method must be implemented in subclass")
 
     def generate(self, messages, **kwargs):
+        if self.static_generation_kwargs:
+            kwargs.update(self.static_generation_kwargs)
         raw_text_response = self._generate(messages, **kwargs)
         if self.warehouse:
             if self.warehouse == 'supabase':
