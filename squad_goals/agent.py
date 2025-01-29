@@ -205,7 +205,6 @@ class Agent():
             try:
                 tool_input = extract_json_from_string(generated)
                 if 'final_answer' in tool_input:
-                    print(f"Final answer detected: {tool_input['final_answer']}")
                     return 'Return Final Answer Tool', json.dumps(tool_input)
             except:
                 pass
