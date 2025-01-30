@@ -46,36 +46,40 @@ class Workflow(BaseModel):
             raise ValueError(f"At least one variable was not replaced in the text: {text}")
         return text
 
-    def run(self, **variables: Dict[str, str]):
+    def run(self, yield_events=False, **variables: Dict[str, str]):
         ''' run the workflow '''
         self.plan.results = []  # reset results
-        while not self.plan.is_complete:
-            # create plan_formatted which is the list of steps with results if they exist
 
-            next_step = self.plan.steps[len(self.plan.results)]
-            next_step = self._replace_variables(next_step, **variables)
-            if self.verbose:
-                print(f"Next Step: {next_step}")
+        def execute_steps():
+            while not self.plan.is_complete:
+                next_step = self.plan.steps[len(self.plan.results)]
+                next_step = self._replace_variables(next_step, **variables)
+                yield dict(event='next_step', next_step=next_step)
+                if self.verbose:
+                    print(f"Next Step: {next_step}")
 
-            on_last_step = len(self.plan.results) == (len(self.plan.steps) - 1)
-            plan_formatted = self.plan.formatted_plan(include_goal=on_last_step)
-            plan_formatted = self._replace_variables(plan_formatted, **variables)
-            if self.verbose:
-                print(f"Formatted Plan: {plan_formatted}")
+                on_last_step = len(self.plan.results) == (len(self.plan.steps) - 1)
+                plan_formatted = self.plan.formatted_plan(include_goal=on_last_step)
+                plan_formatted = self._replace_variables(plan_formatted, **variables)
+                if self.verbose:
+                    print(f"Formatted Plan: {plan_formatted}")
 
-            step_task = Task(
-                name=f"Execute Step {len(self.plan.results) + 1}",
-                goal=f'You are executing a SINGLE step of the following plan.\n\n<plan>\n{plan_formatted}\n</plan>\n\nThe step you are now executing is:\n\n<step>\n{next_step}\n</step>\n\nExecute only the given step of the plan and nothing more.',
-                output_format='text'
-            )
-            self.tasks.append(step_task)
-            self.agent.run(step_task)
-            step_result = step_task.output
-            self.plan.results.append(step_result)
-            if self.verbose:
-                print(f"Step Result: {step_result}")
+                step_task = Task(
+                    name=f"Execute Step {len(self.plan.results) + 1}",
+                    goal=f'You are executing a SINGLE step of the following plan.\n\n<plan>\n{plan_formatted}\n</plan>\n\nThe step you are now executing is:\n\n<step>\n{next_step}\n</step>\n\nExecute only the given step of the plan and nothing more.',
+                    output_format='text'
+                )
+                self.tasks.append(step_task)
+                self.agent.run(step_task)
+                step_result = step_task.output
+                yield dict(event='step_result', step_result=step_result)
+                self.plan.results.append(step_result)
+                if self.verbose:
+                    print(f"Step Result: {step_result}")
 
-        return self.plan.results
+            yield dict(event='workflow_complete', results=self.plan.results)
+
+        return execute_steps() if yield_events else list(execute_steps())
 
 
 class WorkflowTool(BaseTool):
