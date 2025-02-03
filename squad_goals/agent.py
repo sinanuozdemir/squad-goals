@@ -102,7 +102,7 @@ class Agent():
     def tool_by_names(self) -> Dict[str, BaseTool]:
         return {tool.name: tool for tool in self.tools}
 
-    def run(self, task: Task):
+    def run(self, task: Task, yield_events=False):
         previous_responses = copy(self.ai_responses)
         num_loops = 0
         prompt = copy(self.prompt_template).format(
@@ -114,66 +114,63 @@ class Agent():
             final_answer_dict='{final_answer_dict}',
             param_value_dict='{param_value_dict}'
         )
-        while num_loops < self.max_loops:
-            num_loops += 1
-            curr_prompt = prompt.replace(
-                '{previous_responses}', '\n'.join(previous_responses).strip(),
-            ).replace(
-                '{final_answer_dict}', final_answer_dict
-            ).replace('{param_value_dict}', param_value_dict
-                      )
-            generated, tool, tool_input = self.decide_next_action(curr_prompt)
-            if self.debug:
-                print('------')
-                print('RAW GENERATED')
-                print('------')
-                print(generated)
-                print('------')
 
-            self.tools_selected.append(tool)
-            if self.verbose and tool == 'Return Final Answer Tool':
-                print(f"Loop {num_loops}. Returning final answer")
-            if self.verbose:
-                print(f"Loop {num_loops}. Choosing tool {tool} with input: {tool_input}")
-            if tool not in self.tool_by_names:
-                if self.debug:
-                    raise ValueError(f"Unknown tool: {tool}")
-            # Run the tool using the input
-            try:
-                tool_obj = self.tool_by_names[tool]
-                if not tool_input:
-                    tool_input = {}
-                if self.tool_eval_mode:
-                    tool_result = 'Tool evaluation mode is on. No tool will be run.'
-                else:
-                    tool_result = tool_obj.run(**tool_input)
-                self.tools_used.append(tool)
-                if self.debug:
-                    print('tool_result',
-                          str(tool_result)[:200] + '...' if len(str(tool_result)) > 200 else str(tool_result))
-            except Exception as e:
-                self.errors_encountered.append(e)
-                if self.debug:
-                    print(f"Error running tool: {e}. tool_input: {tool_input}")
-                # if not debug, add this as the observation so the agent can try again
-                tool_result = f"Error from tool: {e}"
-            generated += f"\n{OBSERVATION_TOKEN} {tool_result}\nNext Thought: ({self.max_loops - num_loops} thoughts left)"
-            self.ai_responses.append(generated.strip())
-            previous_responses.append(generated)
-            if tool == 'Return Final Answer Tool':
-                if self.verbose:
-                    print(f"Task completed in {num_loops} loops. use \"print(task.output)\" to see the final answer")
-                task.raw_output = tool_result
-                task.completed = True
-                task.succeeded = True
-                prompt_final = prompt.replace(
-                    '{previous_responses}', '\n'.join(previous_responses).strip()).replace(
-                    '{final_answer_dict}', final_answer_dict).replace(
-                    '{param_value_dict}', param_value_dict
-                )
-                if self.use_conversation:
-                    self.conversation.messages.append(Message(content=prompt_final, source=self.name, role='assistant'))
-                return task
+        def execute_steps():
+            nonlocal num_loops
+            while num_loops < self.max_loops:
+                num_loops += 1
+                curr_prompt = prompt.replace(
+                    '{previous_responses}', '\n'.join(previous_responses).strip(),
+                ).replace(
+                    '{final_answer_dict}', final_answer_dict
+                ).replace('{param_value_dict}', param_value_dict)
+
+                generated, tool, tool_input = self.decide_next_action(curr_prompt)
+                yield dict(event='next_agent_action', loop=num_loops, tool=tool, tool_input=tool_input,
+                           generated=generated)
+
+                self.tools_selected.append(tool)
+                if tool not in self.tool_by_names:
+                    self.errors_encountered.append(ValueError(f"Unknown tool: {tool}"))
+                    yield dict(event='error', message=f"Unknown tool: {tool}")
+                    continue
+
+                try:
+                    tool_obj = self.tool_by_names[tool]
+                    tool_result = tool_obj.run(**(
+                                tool_input or {})) if not self.tool_eval_mode else 'Tool evaluation mode is on. No tool will be run.'
+                    self.tools_used.append(tool)
+                except Exception as e:
+                    self.errors_encountered.append(e)
+                    yield dict(event='tool_error', message=f'Error from tool: {e}')
+                    continue
+
+                yield dict(event='tool_result', tool=tool, result=tool_result)
+
+                generated += f"\n{OBSERVATION_TOKEN} {tool_result}\nNext Thought: ({self.max_loops - num_loops} thoughts left)"
+                self.ai_responses.append(generated.strip())
+                previous_responses.append(generated)
+
+                if tool == 'Return Final Answer Tool':
+                    task.raw_output = tool_result
+                    task.completed = True
+                    task.succeeded = True
+                    prompt_final = prompt.replace(
+                        '{previous_responses}', '\n'.join(previous_responses).strip()
+                    ).replace(
+                        '{final_answer_dict}', final_answer_dict
+                    ).replace(
+                        '{param_value_dict}', param_value_dict
+                    )
+                    if self.use_conversation:
+                        self.conversation.messages.append(
+                            Message(content=prompt_final, source=self.name, role='assistant'))
+                    yield dict(event='agent_completed', final_answer=tool_result)
+                    return
+
+            yield dict(event='max_loops_reached', message=f'Max loops ({self.max_loops}) reached.')
+
+        return execute_steps() if yield_events else list(execute_steps())
 
     def decide_next_action(self, prompt: str) -> str:
         messages = [{'role': 'user', 'content': prompt}]
