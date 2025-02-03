@@ -210,7 +210,7 @@ class Agent():
             if self.verbose:
                 print(f"Error parsing generated output: {generated}")
             # if not debug, add this as the observation so the agent can try again
-            tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.tool_names}. If you are trying to end the conversation, use the "Return Final Answer Tool"'
+            tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.tool_names}. If you are trying to end the conversation or you think the task is already solved, please use the "Action: Return Final Answer Tool" and give the final answer this way.'
             tool_input = tool
         else:
             tool = match.group(1).strip()
