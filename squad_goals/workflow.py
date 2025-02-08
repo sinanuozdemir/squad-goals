@@ -27,6 +27,7 @@ class Plan(BaseModel):
 
 class Workflow(BaseModel):
     plan: Plan
+    name: str = 'Workflow'
     goal: str
     agent: Any  # TODO eventually multi agents here
     tasks: List[Any] = []
@@ -96,7 +97,7 @@ class WorkflowTool(BaseTool):
         self.verbose = verbose
         kwargs.update(
             {
-                'name': workflow.goal,
+                'name': workflow.name,
                 'description': f"Runs a workflow with the following plan: {workflow.plan.formatted_plan()}"
             }
         )

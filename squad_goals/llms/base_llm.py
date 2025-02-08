@@ -23,7 +23,7 @@ class LLM:
                 try:
                     from supabase import create_client, Client
                 except ImportError:
-                    raise ImportError("Please install supabase with `pip install supabase-py`")
+                    raise ImportError("Please install supabase with `pip install supabase`")
                 supabase_table = os.environ.get('SUPABASE_TABLE', 'cost_projecting')
                 # find all class variables and add to a dictionary
                 class_vars = {}

@@ -53,13 +53,68 @@ class GoogleSpreadsheetTool(BaseTool):
         ).execute()
         return result
 
-    def run(self, data: List[List[str]]) -> Dict:
+    def get_sheet_data(self) -> List[List[str]]:
         """
-        Runs the append operation.
+        Gets all data from the sheet.
+        :return: List of lists, where each inner list represents a row.
+        """
+        range_name = f"{self.sheet_name}"
+        result = self.service.spreadsheets().values().get(
+            spreadsheetId=self.spreadsheet_id,
+            range=range_name
+        ).execute()
+        return result.get('values', [])
+
+    def find_in_column(self, search_value: str, column_name: str) -> List[int]:
+        """
+        Searches for a value in a specific column and returns the row indices where found.
+        :param search_value: The value to search for
+        :param column_name: The column header/name to search in
+        :return: List of row indices where the value was found (0-based, excluding header row)
+        """
+        data = self.get_sheet_data()
+        if not data:
+            return []
+
+        # Find the column index from the header row
+        headers = data[0]
+        try:
+            column_index = headers.index(column_name)
+        except ValueError:
+            raise ValueError(f"Column '{column_name}' not found in sheet headers")
+
+        # Search for the value in the specified column
+        matches = []
+        for i, row in enumerate(data[1:], 1):  # Start from 1 to skip header row
+            if len(row) > column_index and row[column_index] == search_value:
+                matches.append(i)
+
+        return matches
+
+    def run(self, data: List[List[str]], action: str = "append", **kwargs) -> Dict:
+        """
+        Runs the specified operation.
         :param data: List of lists, where each inner list represents a row.
-        :return: The response from the Sheets API.
+        :param action: The action to perform ("append" or "search")
+        :Additional arguments for specific actions
+            For "search" action:
+                - search_value: The value to search for
+                - column_name: The column header/name to search in
+            For "append" action:
+                - None
+        :return: The response from the operation
         """
-        return self.append_data(data)
+        if action == "append":
+            return self.append_data(data)
+        elif action == "search":
+            search_value = kwargs.get('search_value')
+            column_name = kwargs.get('column_name')
+            if not search_value or not column_name:
+                raise ValueError("search_value and column_name are required for search action")
+            matches = self.find_in_column(search_value, column_name)
+            return {"matches": matches, "total_matches": len(matches)}
+        else:
+            raise ValueError(f"Unknown action: {action}")
 
     # method to add a list of data at a specific range
     def add_data_at_range(self, data: List[List[str]], range_name: str):

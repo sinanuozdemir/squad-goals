@@ -95,8 +95,8 @@ class Agent():
             [f"{tool.name}: {tool.description}. how to run: {tool._describe_run()}" for tool in self.tools])
 
     @property
-    def tool_names(self) -> str:
-        return ", ".join([tool.name for tool in self.tools])
+    def quoted_tool_names(self) -> str:
+        return ", ".join([f'"{tool.name}"' for tool in self.tools])
 
     @property
     def tool_by_names(self) -> Dict[str, BaseTool]:
@@ -108,7 +108,7 @@ class Agent():
         prompt = copy(self.prompt_template).format(
             today=datetime.date.today(),
             tool_description=self.tool_description,
-            tool_names=self.tool_names,
+            tool_names=self.quoted_tool_names,
             goal=task.goal,
             previous_responses='{previous_responses}',
             final_answer_dict='{final_answer_dict}',
@@ -210,7 +210,7 @@ class Agent():
             if self.verbose:
                 print(f"Error parsing generated output: {generated}")
             # if not debug, add this as the observation so the agent can try again
-            tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.tool_names}. If you are trying to end the conversation or you think the task is already solved, please use the "Action: Return Final Answer Tool" and give the final answer this way.'
+            tool = F'TOOL ERROR. MAKE SURE TO STATE A TOOL NAME FROM THE LIST: {self.quoted_tool_names}. If you are trying to end the conversation or you think the task is already solved, please use the "Action: Return Final Answer Tool" and give the final answer this way.'
             tool_input = tool
         else:
             tool = match.group(1).strip()

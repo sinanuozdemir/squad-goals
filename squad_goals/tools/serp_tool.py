@@ -17,23 +17,29 @@ class SerpTool(BaseTool):
         self.api_key = api_key
         self.name = "SerpAPI Tool"
         self.description = "This tool uses SerpAPI to get search results from Google"
+        self.engine = 'google'
         super().__init__(self.name, self.description, **kwargs)
 
-    def run(self, query: str) -> list:
-        '''
-        :param query: The search query e.g. query="Python programming" or query="Coffee site:wikipedia.org"
-        '''
+    def _search(self, query: str, **kwargs) -> dict:
+
         params: dict = {
-            "engine": 'google',
+            "engine": self.engine,
             "google_domain": "google.com",
             "gl": "us",
             "hl": "en",
             "q": query,
             "api_key": self.api_key
         }
+        params.update(kwargs)
 
         search = GoogleSearch(params)
-        response = search.get_dict()
+        return search.get_dict()
+
+    def run(self, query: str) -> list:
+        '''
+        :param query: The search query e.g. query="Python programming" or query="Coffee site:wikipedia.org"
+        '''
+        response = self._search(query)
         if 'organic_results' not in response:
             return []
         return [dict(title=r['title'], link=r['link'], snippet=r['snippet']) for r in response['organic_results']]
