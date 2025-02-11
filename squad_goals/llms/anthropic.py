@@ -20,11 +20,10 @@ class AnthropicLLM(LLM):
         self.client = Anthropic(api_key=api_key)
         super().__init__(**kwargs)
 
-    def _generate(self, messages, max_tokens=1024, **kwargs):
+    def _generate(self, messages, **kwargs):
         """
         Sends a prompt to Claude and returns the generated response.
         :param messages: List of dictionaries, where each dictionary represents a message with 'role' and 'content'.
-        :param max_tokens: Maximum number of tokens to generate in response.
         :return: Generated text from Claude.
         """
         # Convert the input message format if necessary
@@ -43,7 +42,6 @@ class AnthropicLLM(LLM):
         # Make a request to Claude via Anthropic's API
         response = self.client.messages.create(
             model=self.model_name,
-            max_tokens=max_tokens,
             messages=anthropic_messages,
             **kwargs
         )
