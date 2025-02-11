@@ -39,6 +39,9 @@ class AnthropicLLM(LLM):
                 anthropic_messages.append({"role": "user", "content": "You are a helpful assistant."})
             anthropic_messages.append({"role": role, "content": content})
 
+        if 'max_tokens' not in kwargs:
+            kwargs['max_tokens'] = 4096
+
         # Make a request to Claude via Anthropic's API
         response = self.client.messages.create(
             model=self.model_name,
