@@ -24,8 +24,8 @@ from squad_goals.llms.openai import OpenAILLM
 import os
 
 # Set API keys as environment variables
-os.environ['SERP_API_KEY'] = 'your_openai_key'
-os.environ['OPENAI_API_KEY'] = 'your_serp_key'
+os.environ['SERP_API_KEY'] = 'your_serp_key'
+os.environ['OPENAI_API_KEY'] = 'your_openai_key'
 
 # Initialize the OpenAI LLM
 openai_llm = OpenAILLM(model_name='gpt-4o-mini')
