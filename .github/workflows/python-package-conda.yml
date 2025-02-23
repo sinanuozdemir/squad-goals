@@ -1,0 +1,63 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m venv test_env
+          source test_env/bin/activate
+          pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Run tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
+        run: |
+          source test_env/bin/activate
+          pytest -s -v > test-results.log
+          if [ $? -eq 0 ]; then
+            echo "✅ Tests Passed!" > test_status.txt
+          else
+            echo "❌ Tests Failed!" > test_status.txt
+            exit 1
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.log
+
+      - name: Update badge status
+        if: success()
+        run: echo "![Tests Passing](https://img.shields.io/badge/Tests-Passing-brightgreen)" > test-badge.md
+
+      - name: Update badge status (failure)
+        if: failure()
+        run: echo "![Tests Failing](https://img.shields.io/badge/Tests-Failing-red)" > test-badge.md
+
+      - name: Commit & Push Test Status
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions@github.com"
+          git add test-badge.md test_status.txt
+          git commit -m "Update test status" || echo "No changes to commit"
+          git push || echo "No changes to push"
