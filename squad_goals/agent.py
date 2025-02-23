@@ -136,10 +136,12 @@ class Agent():
                     continue
 
                 try:
+                    yield dict(event='tool_selected', tool=tool)
                     tool_obj = self.tool_by_names[tool]
                     tool_result = tool_obj.run(**(
                                 tool_input or {})) if not self.tool_eval_mode else 'Tool evaluation mode is on. No tool will be run.'
                     self.tools_used.append(tool)
+                    yield dict(event='tool_run', tool=tool, tool_input=tool_input, tool_result=tool_result)
                 except Exception as e:
                     self.errors_encountered.append(e)
                     yield dict(event='tool_error', message=f'Error from tool: {e}')

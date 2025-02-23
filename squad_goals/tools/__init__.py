@@ -1,5 +1,5 @@
 from .api_tool import APITool
-from .base_tool import BaseTool
+from .base_tool import BaseTool, ReturnFinalAnswerTool
 from .catfish import ReversePhoneLookupTool, ReverseImageSearchTool
 from .firecrawl import FirecrawlSearchTool
 from .google_sheets import GoogleSpreadsheetTool

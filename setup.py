@@ -1,11 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="Agents",
-    version="0.1",
+    name="squad_goals",
+    version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        "requests",
-        "beautifulsoup4",
+        # Add your dependencies here
     ],
 )

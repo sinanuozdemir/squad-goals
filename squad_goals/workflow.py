@@ -29,7 +29,8 @@ class Workflow(BaseModel):
     plan: Plan
     name: str = 'Workflow'
     goal: str
-    agent: Any  # TODO eventually multi agents here
+    agent: Any = None
+    agents: List[Any] = []
     tasks: List[Any] = []
     verbose: bool = False
 
@@ -72,13 +73,19 @@ class Workflow(BaseModel):
                 )
                 self.tasks.append(step_task)
 
-                # self.agent.run(step_task) also has an optional yield_events parameter, so we need to pass it through
+                # agent.run(step_task) also has an optional yield_events parameter, so we need to pass it through
                 # if we are yielding events, we need to yield them from the agent as well
+                if self.agents:  # use the agent in the list with the same index as the step
+                    agent = self.agents[len(self.plan.results) % len(self.agents)]
+                elif self.agent:
+                    agent = self.agent
+                else:
+                    raise ValueError("No agent or agents provided to run the workflow")
                 if yield_events:
-                    for event in self.agent.run(step_task, yield_events=True):
+                    for event in agent.run(step_task, yield_events=True):
                         yield event
                 else:
-                    self.agent.run(step_task)
+                    agent.run(step_task)
                 step_result = step_task.output
                 yield dict(event='step_result', step_result=step_result)
                 self.plan.results.append(step_result)

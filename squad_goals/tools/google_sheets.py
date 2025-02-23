@@ -13,6 +13,7 @@ class GoogleSpreadsheetTool(BaseTool):
             credentials_json: Optional[Dict] = None,
             name: str = "Google Spreadsheet Tool",
             description: str = "This tool appends data to a Google Spreadsheet.",
+            header_row: int = 0,
             **kwargs
     ):
         try:
@@ -23,6 +24,7 @@ class GoogleSpreadsheetTool(BaseTool):
         self.spreadsheet_id = spreadsheet_id
         self.sheet_name = sheet_name
         self.credentials_json = credentials_json
+        self.header_row = header_row
         if not self.credentials_json:
             # check GOOGLE_CREDENTIALS env
             try:
@@ -56,7 +58,7 @@ class GoogleSpreadsheetTool(BaseTool):
     def get_data_in_range(self, range_name: str) -> List[List[str]]:
         """
         Gets all data from a specific range.
-        :param range_name: The range to get data from, e.g. "Sheet1!A1:B2"
+        :param range_name: The range to get data from, e.g. "Sheet1!A1:B2" or "Dashboard!A3:A"
         :return: List of lists, where each inner list represents a row.
         """
         result = self.service.spreadsheets().values().get(
@@ -89,7 +91,7 @@ class GoogleSpreadsheetTool(BaseTool):
             return []
 
         # Find the column index from the header row
-        headers = data[0]
+        headers = data[self.header_row or 0]
         try:
             column_index = headers.index(column_name)
         except ValueError:
@@ -111,10 +113,12 @@ class GoogleSpreadsheetTool(BaseTool):
         e.g. {'columns': 5, 'rows': 10, 'sheet_name': 'Sheet1', 'spreadsheet_id': 'abc123', 'column_map': {'A': 'Name', 'B': 'Age'}}
         '''
         data = self.get_sheet_data()
+        data = [_ for _ in data if _]
+        headers = data[self.header_row or 0]
         if not data:
             return {'columns': 0, 'rows': 0, 'sheet_name': self.sheet_name, 'spreadsheet_id': self.spreadsheet_id}
-        n_cols, n_rows = len(data[0]), len(data)
-        column_map = {chr(65 + i): col for i, col in enumerate(data[0])}
+        n_cols, n_rows = len(headers), len(data)
+        column_map = {chr(65 + i): col for i, col in enumerate(headers)}
         return {'columns': n_cols, 'rows': n_rows, 'sheet_name': self.sheet_name, 'spreadsheet_id': self.spreadsheet_id,
                 'column_map': column_map}
 
@@ -158,7 +162,7 @@ class GoogleSpreadsheetTool(BaseTool):
                 - value: The value to insert
                 - cell: The cell to insert the value into, e.g. "A1"
             For action="get_data_in_range":
-                - range_name: The range to get data from, e.g. "Sheet1!A1:B2"
+                - range_name: The range to get data from, e.g. "Sheet1!A1:B2". For example if you need data from the 3rd column, you can use "Sheet1!A3:A"
         :return: The response from the operation
         """
         if action == "append_to_sheet":
@@ -191,7 +195,7 @@ class GoogleSpreadsheetTool(BaseTool):
         """
         Appends data to the end of the sheet.
         :param data: List of lists, where each inner list represents a row.
-        :param range_name: The range to add the data to, e.g. "Sheet1!A1"
+        :param range_name: The range to add the data to, e.g. "Sheet1!A1" or "Dashboard!A3" or "Sheet6!A1:B2"
         """
         body = {
             'values': data
