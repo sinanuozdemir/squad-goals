@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 from squad_goals import Agent, Task
-from squad_goals.llms import OpenAILLM
+from squad_goals.llms.openai import OpenAILLM
 from squad_goals.tools import SerpTool
 
 # Load environment variables from test.env

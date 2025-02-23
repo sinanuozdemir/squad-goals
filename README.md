@@ -20,7 +20,7 @@ Here’s a quick example of how to use `squad-goals` with different components:
 ```python
 from squad_goals import Agent, Task
 from squad_goals.tools import SerpTool
-from squad_goals.llms import OpenAILLM
+from squad_goals.llms.openai import OpenAILLM
 import os
 
 # Set API keys as environment variables
