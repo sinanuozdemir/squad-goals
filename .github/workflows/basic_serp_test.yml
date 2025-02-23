@@ -30,15 +30,16 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
-        run: |
-          source test_env/bin/activate
-          pytest -s -v > test-results.log
-          if [ $? -eq 0 ]; then
-            echo "✅ Tests Passed!" > test_status.txt
-          else
-            echo "❌ Tests Failed!" > test_status.txt
-            exit 1
-          fi
+          run: |
+            source test_env/bin/activate
+            pytest -s -v | tee test-results.log
+            if [ $? -eq 0 ]; then
+              echo "✅ Tests Passed!" > test_status.txt
+            else
+              echo "❌ Tests Failed!" > test_status.txt
+              cat test-results.log  # Print the test output
+              exit 1
+            fi
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
