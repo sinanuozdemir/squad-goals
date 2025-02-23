@@ -60,6 +60,8 @@ events = agent.run(wider_lookup_task)
 print(events[-1])
 ```
 
+You can find more examples [here](./example_notebooks)
+
 ## Features
 
 - **Agent and Task Management**: Define agents with specific tasks and goals.
