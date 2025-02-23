@@ -24,8 +24,8 @@ from squad_goals.llms import OpenAILLM
 import os
 
 # Set API keys as environment variables
-os.environ['SERP_API_KEY'] = 'your_serp_api_key'
-os.environ['OPENAI_API_KEY'] = 'your_openai_api_key'
+os.environ['SERP_API_KEY'] = 'your_openai_key'
+os.environ['OPENAI_API_KEY'] = 'your_serp_key'
 
 # Initialize the OpenAI LLM
 openai_llm = OpenAILLM(model_name='gpt-4o-mini')
@@ -47,7 +47,8 @@ lookup_task = Task(
 )
 
 # Run the task with the agent
-agent.run(lookup_task)
+events = agent.run(lookup_task)
+print(events[-1])
 
 # Create and run another task with multiple web lookups allowed
 wider_lookup_task = Task(
@@ -55,7 +56,8 @@ wider_lookup_task = Task(
     goal='Tell me about Sinan Ozdemir. Make multiple web lookups.',
 )
 
-agent.run(wider_lookup_task)
+events = agent.run(wider_lookup_task)
+print(events[-1])
 ```
 
 ## Features
