@@ -61,6 +61,8 @@ Ensure functionality by running tests with the sample YAML configuration:
 
 ```yaml
 verbose: true
+
+// all tasks will use the same agent (same llm, tools, max_loops, etc.)
 llm:
   model_name: "claude-3-5-haiku-latest"
   class: "AnthropicLLM"
@@ -77,16 +79,18 @@ tasks:
     output_format: "json"
     output_length_range: [8, 8]
     check_format: "json"
+    // If you don't care about the tool calls, you can omit the tool_calls key.
+    tool_calls: [] // this means that you expect no tool calls for this task.
   - name: "Text Output 1"
-    goal: "Describe Ankara in 10 words or less."
-    output_format: "text"
-    word_count_range: [0, 10]
+    goal: "Look up Sinan Ozdemir the AI guy and describe him in 20 words or less."
+    word_count_range: [0, 20]
+    tool_calls: ["SerpAPI Tool"]
 ```
 
 ### Running the Test
 
 Execute the test script:
-- Assumes that `sample_test.yaml` is in the `tests` directory.
+- Assumes that `sample_test.yaml` is in the `tests` directory. You can find an example of this file in the `tests` directory. Note the keys in the yaml file are fake.
 
 ```bash
 python tests/test_agent_from_yaml.py tests/sample_test.yaml

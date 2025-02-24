@@ -42,7 +42,7 @@ def create_test_agent(llm_config, env_vars, tool_names, verbose):
     )
     return agent
 
-def run_test(logger,task, agent):
+def run_test(logger, task, agent):
     test_passed = True
     # Create a Task object dynamically from the task dictionary
     task_module = importlib.import_module('squad_goals')
@@ -60,6 +60,18 @@ def run_test(logger,task, agent):
         test_passed = False
         logger.info(f"Output for task '{task_obj.name}' is empty.")
         return events, task_obj, test_passed
+    
+    # Check if the tool calls match the tools in the events
+    if 'tool_calls' in task:
+        expected_tools = task['tool_calls']
+        # if expected_tools contains None, the expected_tools should be empty
+        actual_tools = [event['tool'] for event in events if event['event'] == 'tool_selected']
+        # return "Return Final Answer Tool" from actual_tools
+        actual_tools = [tool for tool in actual_tools if tool != 'Return Final Answer Tool']
+        
+        if expected_tools != actual_tools:
+            test_passed = False
+            logger.info(f"Tool calls for task '{task_obj.name}' do not match. Expected: {expected_tools}, Found: {actual_tools}")
     
     # Check if the output is a list or dict and validate JSON format
     check_format = task.get('check_format', 'text')
@@ -86,9 +98,7 @@ def run_test(logger,task, agent):
                 test_passed = False
                 logger.info(f"Output for task '{task_obj.name}' has {char_count} characters, which is not within the specified range.")
     
-    
     return events, task_obj, test_passed
-
 def setup_logging(verbose=False):
     # Create a logger
     logger = logging.getLogger(__name__)
@@ -100,12 +110,17 @@ def setup_logging(verbose=False):
     # Create a console handler
     ch = logging.StreamHandler()
     
-    # Create a formatter and set it for the handler
+    # Create a file handler
+    fh = logging.FileHandler('test_agent_from_yaml.log')
+    
+    # Create a formatter and set it for the handlers
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
     
-    # Add the handler to the logger
+    # Add the handlers to the logger
     logger.addHandler(ch)
+    logger.addHandler(fh)
     
     return logger
 
