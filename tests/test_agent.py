@@ -1,5 +1,8 @@
 import os
 
+os.system('pip install openai')
+
+
 from dotenv import load_dotenv
 
 from squad_goals import Agent, Task
