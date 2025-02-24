@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import venv
+import shutil
 
 import pytest
 
@@ -10,8 +11,12 @@ import pytest
 def local_env():
     """Create a temporary virtual environment and install local squad_goals."""
     env_dir = os.path.join(os.getcwd(), "test_env")
-
-    # Create virtual environment
+    
+    # Delete existing test_env directory if it exists
+    if os.path.exists(env_dir):
+        shutil.rmtree(env_dir)
+    
+    # Create new virtual environment
     venv.create(env_dir, with_pip=True)
     python_executable = os.path.join(env_dir, "bin", "python") if sys.platform != "win32" else os.path.join(env_dir,
                                                                                                             "Scripts",
