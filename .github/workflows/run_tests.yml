@@ -25,6 +25,7 @@ jobs:
           pip install --upgrade pip
           pip install -e .
           pip install --upgrade pytest google-search-results PyYAML openai
+          pip install openai
 
       - name: Run tests
         env:
