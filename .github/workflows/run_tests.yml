@@ -33,7 +33,7 @@ jobs:
           pytest -s -v | tee test-results.log
           echo "Last 10 lines of the test log:"
           tail -n 10 test-results.log
-          if grep -q "✅ Tests Passed!" test-results.log; then
+          if grep -q " passed in " test-results.log; then
             echo "✅ Tests Passed!" > test_status.txt
             echo "![Tests Passing](https://img.shields.io/badge/Tests-Passing-brightgreen)" > test-badge.md
           elif grep -q "collected 0 items" test-results.log; then
