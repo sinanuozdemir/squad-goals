@@ -1,21 +1,18 @@
-
 # Squad Goals ![Test Status](https://github.com/sinanuozdemir/squad-goals/actions/workflows/run_tests.yml/badge.svg)
 
-Originally written for a [lecture on Agents for O'Reilly](https://learning.oreilly.com/live-events/ai-agents-a-z/0642572007604/), **Squad Goals** is an educational Python package designed to manage goals, tasks, and agents while integrating with large language models and tools like SerpAPI. The goal here is to show off how simple it can be to make a basic Agent framework.
+**Squad Goals** is an educational Python package for managing goals, tasks, and agents, integrating with large language models and tools like SerpAPI. Originally developed for a [lecture on Agents for O'Reilly](https://learning.oreilly.com/live-events/ai-agents-a-z/0642572007604/), it demonstrates how to create a basic Agent framework.
 
 ## Installation
 
-Install `squad-goals` directly from this repository:
+Install directly from the repository:
 
 ```bash
 pip install git+https://github.com/sinanuozdemir/squad-goals.git
 ```
 
-This command installs `squad-goals` along with its dependencies.
-
 ## Usage
 
-Here’s a quick example of how to use `squad-goals` with different components:
+Here's a quick example of using `squad-goals`:
 
 ```python
 from squad_goals import Agent, Task
@@ -23,44 +20,26 @@ from squad_goals.tools import SerpTool
 from squad_goals.llms.openai import OpenAILLM
 import os
 
-# Set API keys as environment variables
+# Set API keys
 os.environ['SERP_API_KEY'] = 'your_serp_key'
 os.environ['OPENAI_API_KEY'] = 'your_openai_key'
 
-# Initialize the OpenAI LLM
+# Initialize components
 openai_llm = OpenAILLM(model_name='gpt-4o-mini')
-
-# Initialize the SerpTool for web searching
 serp_tool = SerpTool()
+agent = Agent(tools=[serp_tool], llm=openai_llm, verbose=False)
 
-# Create an agent with tools and an LLM
-agent = Agent(
-    tools=[serp_tool],
-    llm=openai_llm,
-    verbose=False
-)
-
-# Define a task with a goal
-lookup_task = Task(
-    name='Lookup',
-    goal='Tell me about Sinan Ozdemir. Only make one web search.',
-)
-
-# Run the task with the agent
+# Define and run tasks
+lookup_task = Task(name='Lookup', goal='Tell me about Sinan Ozdemir. Only make one web search.')
 events = agent.run(lookup_task)
 print(events[-1])
 
-# Create and run another task with multiple web lookups allowed
-wider_lookup_task = Task(
-    name='Lookup',
-    goal='Tell me about Sinan Ozdemir. Make multiple web lookups.',
-)
-
+wider_lookup_task = Task(name='Lookup', goal='Tell me about Sinan Ozdemir. Make multiple web lookups.')
 events = agent.run(wider_lookup_task)
 print(events[-1])
 ```
 
-You can find more examples [here](./example_notebooks)
+More examples are available [here](./example_notebooks).
 
 ## Features
 
@@ -70,8 +49,48 @@ You can find more examples [here](./example_notebooks)
 
 ## Contributing
 
-Contributions are welcome! Please submit a pull request or open an issue for suggestions.
+Contributions are welcome! Submit a pull request or open an issue for suggestions.
 
 ## License
 
 This project is licensed under the MIT License.
+
+## Running Tests
+
+Ensure functionality by running tests with the sample YAML configuration:
+
+```yaml
+verbose: true
+llm:
+  model_name: "claude-3-5-haiku-latest"
+  class: "AnthropicLLM"
+max_loops: 3
+env_vars:
+  ANTHROPIC_API_KEY: "***"
+  SERP_API_KEY: "***"
+tools:
+  - SerpTool
+
+tasks:
+  - name: "Json Output 1"
+    goal: "Write a list of the planets in our solar system as a python list."
+    output_format: "json"
+    output_length_range: [8, 8]
+    check_format: "json"
+  - name: "Text Output 1"
+    goal: "Describe Ankara in 10 words or less."
+    output_format: "text"
+    word_count_range: [0, 10]
+```
+
+### Running the Test
+
+Execute the test script:
+- Assumes that `sample_test.yaml` is in the `tests` directory.
+
+```bash
+python tests/test_agent_from_yaml.py tests/sample_test.yaml
+```
+### System Tests
+
+For comprehensive system testing, use `./run_tests.sh`

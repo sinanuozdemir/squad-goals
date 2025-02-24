@@ -1,0 +1,32 @@
+verbose: true
+llm:
+  model_name: "claude-3-5-haiku-latest"
+  class: "AnthropicLLM"
+max_loops: 3
+env_vars:
+  ANTHROPIC_API_KEY: "***"
+  SERP_API_KEY: ""***"
+tools:
+  - SerpTool
+
+tasks:
+  - name: "Json Output 1"
+    goal: "Write a list of the planets in our solar system as a python list."
+    output_format: "json"
+    output_length_range:
+      - 8
+      - 8
+    check_format: "json"
+  - name: "Json Output 2"
+    goal: "Make a list of US states in alphabetical order and return it as a python list."
+    output_format: "json"
+    output_length_range:
+      - 50
+      - 50
+    check_format: "json"
+  - name: "Text Output 1"
+    goal: "Describe Ankara in 10 words or less."
+    output_format: "text"
+    word_count_range:
+      - 0
+      - 10
