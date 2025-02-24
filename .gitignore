@@ -22,3 +22,4 @@ examples/
 # Specific files
 *.log
 .DS_Store
+test-badge.md
