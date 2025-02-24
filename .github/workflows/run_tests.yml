@@ -34,8 +34,11 @@ jobs:
         run: |
           source test_env/bin/activate
           pytest -s -v | tee test-results.log
+          echo "Last 10 lines of the test log:"
+          tail -n 10 test-results.log
           if [ $? -eq 0 ]; then
             echo "✅ Tests Passed!" > test_status.txt
+            echo "![Tests Passing](https://img.shields.io/badge/Tests-Passing-brightgreen)" > test-badge.md
           else
             echo "❌ Tests Failed!" > test_status.txt
             cat test-results.log  # Print the test output
@@ -48,10 +51,6 @@ jobs:
         with:
           name: test-results
           path: test-results.log
-
-      - name: Update badge status
-        if: success()
-        run: echo "![Tests Passing](https://img.shields.io/badge/Tests-Passing-brightgreen)" > test-badge.md
 
       - name: Commit & Push Test Status
         run: |
