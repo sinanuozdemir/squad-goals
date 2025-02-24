@@ -38,6 +38,7 @@ jobs:
           else
             echo "❌ Tests Failed!" > test_status.txt
             cat test-results.log  # Print the test output
+            echo "![Tests Failing](https://img.shields.io/badge/Tests-Failing-red)" > test-badge.md
             exit 1
           fi
 
@@ -50,10 +51,6 @@ jobs:
       - name: Update badge status
         if: success()
         run: echo "![Tests Passing](https://img.shields.io/badge/Tests-Passing-brightgreen)" > test-badge.md
-
-      - name: Update badge status (failure)
-        if: failure()
-        run: echo "![Tests Failing](https://img.shields.io/badge/Tests-Failing-red)" > test-badge.md
 
       - name: Commit & Push Test Status
         run: |
