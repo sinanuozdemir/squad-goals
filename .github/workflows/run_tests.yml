@@ -43,6 +43,11 @@ jobs:
             echo "❌ Tests Failed!" > test_status.txt
             cat test-results.log  # Print the test output
             echo "![Tests Failing](https://img.shields.io/badge/Tests-Failing-red)" > test-badge.md
+            git config --local user.name "github-actions[bot]"
+            git config --local user.email "github-actions@github.com"
+            git add test-badge.md
+            git commit -m "Update test badge" || echo "No changes to commit"
+            git push || echo "No changes to push"
             exit 1
           fi
 
