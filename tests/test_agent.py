@@ -1,7 +1,5 @@
+__test__ = False
 import os
-
-os.system('pip install openai')
-
 
 from dotenv import load_dotenv
 
