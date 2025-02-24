@@ -16,7 +16,7 @@ def test_agent_execution():
     assert 'SERP_API_KEY' in os.environ, "SERP_API_KEY missing from environment."
 
     # Initialize OpenAI LLM
-    openai_llm = OpenAILLM(model_name='gpt-4')
+    openai_llm = OpenAILLM(model_name='gpt-4o-mini')
     serp_tool = SerpTool(api_key=os.environ.get('SERP_API_KEY'))
 
     # Create the agent
