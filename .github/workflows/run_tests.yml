@@ -39,6 +39,9 @@ jobs:
           if grep -q "✅ Tests Passed!" test-results.log; then
             echo "✅ Tests Passed!" > test_status.txt
             echo "![Tests Passing](https://img.shields.io/badge/Tests-Passing-brightgreen)" > test-badge.md
+          elif grep -q "collected 0 items" test-results.log; then
+            echo "No tests were collected." > test_status.txt
+            rm -f test-badge.md
           else
             echo "❌ Tests Failed!" > test_status.txt
             cat test-results.log  # Print the test output
