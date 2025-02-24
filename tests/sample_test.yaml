@@ -16,8 +16,6 @@ tasks:
     output_length_range: [8, 8]
     check_format: "json"
     tool_calls: []
-    check_format: "json"
-    tool_calls: []
   - name: "Text Output 1"
     goal: "Describe the season of Summer in 10 words or less."
     word_count_range: [0, 10]
