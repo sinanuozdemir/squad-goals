@@ -90,11 +90,13 @@ tasks:
 ### Running the Test
 
 Execute the test script:
+
 - Assumes that `sample_test.yaml` is in the `tests` directory. You can find an example of this file in the `tests` directory. Note the keys in the yaml file are fake.
 
 ```bash
 python tests/test_agent_from_yaml.py tests/sample_test.yaml
 ```
+
 ### System Tests
 
 For comprehensive system testing, use `./run_tests.sh`

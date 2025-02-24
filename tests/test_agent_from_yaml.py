@@ -5,6 +5,7 @@ import os
 import importlib
 from tqdm import tqdm
 import logging
+import argparse
 
 def load_yaml(file_path):
     with open(file_path, 'r') as file:
@@ -127,7 +128,12 @@ def setup_logging(verbose=False):
     return logger
 
 def main():
-    config = load_yaml('tests/sample_test.yaml')
+    # Add command-line argument parsing
+    parser = argparse.ArgumentParser(description='Test an agent from a YAML configuration file.')
+    parser.add_argument('yaml_file', type=str, help='Path to the YAML configuration file')
+    args = parser.parse_args()
+
+    config = load_yaml(args.yaml_file)
     
     # Set up logging
     verbose = config.get('verbose', False)
