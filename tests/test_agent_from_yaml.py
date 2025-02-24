@@ -1,3 +1,5 @@
+__test__ = False
+
 import yaml
 import os
 import importlib

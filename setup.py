@@ -9,5 +9,5 @@ setup(
         "pydantic",
         "requests",
         "beautifulsoup4",
-    ],
+    ]
 )

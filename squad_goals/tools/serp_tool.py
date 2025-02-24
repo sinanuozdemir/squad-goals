@@ -43,3 +43,23 @@ class SerpTool(BaseTool):
         if 'organic_results' not in response:
             return []
         return [dict(title=r['title'], link=r['link'], snippet=r['snippet']) for r in response['organic_results']]
+
+
+
+# a sub-tool of SerpTool where engine is set to google_reverse_image and we need the 'image_url' parameter
+class ReverseImageSearchTool(SerpTool):
+    def __init__(self, api_key=None, **kwargs):
+        super().__init__(api_key, **kwargs)
+        self.engine = 'google_reverse_image'
+        self.name = "Reverse Image Search Tool"
+        self.description = "This tool should be used to reverse search an image to find where it is used on the web."
+
+    def run(self, image_url: str) -> list:
+        '''
+        :param image_url: The URL of the image to search for
+        '''
+        response = self._search(query=None, image_url=image_url)
+        if 'image_results' not in response:
+            return []
+        return [dict(title=r['title'], link=r['link'], snippet=r['snippet']) for r in response['image_results']]
+
