@@ -20,8 +20,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m venv test_env
-          source test_env/bin/activate
           pip install --upgrade pip
           pip install -e .
           pip install --upgrade pytest google-search-results PyYAML openai
@@ -32,7 +30,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
         run: |
-          source test_env/bin/activate
           pytest -s -v | tee test-results.log
           echo "Last 10 lines of the test log:"
           tail -n 10 test-results.log

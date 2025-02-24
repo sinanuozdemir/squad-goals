@@ -1,4 +1,3 @@
-__test__ = False
 import os
 
 from dotenv import load_dotenv
