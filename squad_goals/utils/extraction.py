@@ -1,25 +1,38 @@
 import json
 import re
 
-
 def extract_json_from_string(input_string):
     # Use regex to find the JSON part
     # input_string = re.sub(r'[\x00-\x1F\x7F]', '', input_string)  # Remove control characters
 
-    match = re.search(r'.*?({[^{}]*({[^{}]*})*[^{}]*})', input_string, re.DOTALL)
-    if match:
-        json_str = match.group(1)
+    # Try to find JSON objects with curly braces
+    matches = re.findall(r'({(?:[^{}]|(?:{[^{}]*}))*})', input_string, re.DOTALL)
+    for match in matches:
+        print(f"match 1: {match}")
         try:
-            # Load the JSON string as a dictionary
-            return json.loads(json_str, strict=False)
-        except json.JSONDecodeError:
-            return None
-    # now use regex to find a dictionary or list that we can eval
-    match = re.search(r'([\[{].*?[\]}])', input_string, re.DOTALL)
-    if match:
-        try:
-            return eval(match.group(1))
+            # Load the JSON string
+            return json.loads(match, strict=False)
         except Exception:
-            return None
-    else:
-        return None
+            pass
+
+    # Try to find JSON objects with balanced braces/brackets
+    matches = re.findall(r'(\{(?:[^{}]|(?:\{[^{}]*\}))*\}|\[(?:[^\[\]]|(?:\[[^\[\]]*\]))*\])', input_string, re.DOTALL)
+    for match in matches:
+        print(f"match 2: {match}")
+        try:
+            match = match.replace('\\"', '"')
+            return eval(match)
+        except Exception:
+            pass
+    
+    # Try to find arrays or simple objects that can be evaluated
+    matches = re.findall(r'([\[{].*?[\]}])', input_string, re.DOTALL)
+    for match in matches:
+        print(f"match 3: {match}")
+        try:
+            match = match.replace('\\"', '"')
+            return eval(match)
+        except Exception:
+            pass
+
+    return None
