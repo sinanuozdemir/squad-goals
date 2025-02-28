@@ -8,7 +8,6 @@ def extract_json_from_string(input_string):
     # Try to find JSON objects with curly braces
     matches = re.findall(r'({(?:[^{}]|(?:{[^{}]*}))*})', input_string, re.DOTALL)
     for match in matches:
-        print(f"match 1: {match}")
         try:
             # Load the JSON string
             return json.loads(match, strict=False)
@@ -18,7 +17,6 @@ def extract_json_from_string(input_string):
     # Try to find JSON objects with balanced braces/brackets
     matches = re.findall(r'(\{(?:[^{}]|(?:\{[^{}]*\}))*\}|\[(?:[^\[\]]|(?:\[[^\[\]]*\]))*\])', input_string, re.DOTALL)
     for match in matches:
-        print(f"match 2: {match}")
         try:
             match = match.replace('\\"', '"')
             return eval(match)
@@ -28,7 +26,6 @@ def extract_json_from_string(input_string):
     # Try to find arrays or simple objects that can be evaluated
     matches = re.findall(r'([\[{].*?[\]}])', input_string, re.DOTALL)
     for match in matches:
-        print(f"match 3: {match}")
         try:
             match = match.replace('\\"', '"')
             return eval(match)
