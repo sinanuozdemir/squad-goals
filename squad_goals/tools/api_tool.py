@@ -33,13 +33,21 @@ class APITool(BaseTool):
         headers = {
             self.api_header_key: f"{self.api_header_value} {self.api_key}"
         } if self.api_key else {}
-        # replace url variables with values from kwargs, raise error if not found
+
+        # Replace URL variables with values from kwargs, raise error if not found
         if len(set(self.url_variables) - set(kwargs.keys())) > 0:
             raise ValueError(f"URL variables {set(self.url_variables) - set(kwargs.keys())} not found in kwargs")
+
         url_to_use = copy(self.api_url)
         for url_var in self.url_variables:
             url_to_use = url_to_use.replace(f"{{{url_var}}}", kwargs[url_var])
-        response = getattr(requests, self.api_method.lower())(url_to_use, headers=headers, json=api_payload)
+
+        # Use api_payload as query parameters for GET requests
+        if self.api_method == 'GET' and api_payload:
+            response = requests.get(url_to_use, headers=headers, params=api_payload)
+        else:
+            response = getattr(requests, self.api_method.lower())(url_to_use, headers=headers, json=api_payload)
+
         return response.json()
 
     # base tool has _describe_run, but add the url variables here so they know to set it
