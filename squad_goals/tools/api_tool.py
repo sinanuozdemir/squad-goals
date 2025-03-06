@@ -16,6 +16,7 @@ class APITool(BaseTool):
             name: str = "API Tool",
             api_method='POST',
             description: str = "This tool uses an API to get information",
+            static_kwargs: dict = None
             **kwargs
     ):
         self.api_url = api_url
@@ -26,6 +27,7 @@ class APITool(BaseTool):
         # using regex, check for {business_id} or other variables in the url and save
         re_pattern = r'{(\w+)}'
         self.url_variables = re.findall(re_pattern, api_url)
+        self.static_kwargs = static_kwargs
 
         super().__init__(name, description, **kwargs)
 
@@ -39,6 +41,7 @@ class APITool(BaseTool):
             raise ValueError(f"URL variables {set(self.url_variables) - set(kwargs.keys())} not found in kwargs")
 
         url_to_use = copy(self.api_url)
+        kwargs.update(self.static_kwargs or {})
         for url_var in self.url_variables:
             url_to_use = url_to_use.replace(f"{{{url_var}}}", kwargs[url_var])
 
