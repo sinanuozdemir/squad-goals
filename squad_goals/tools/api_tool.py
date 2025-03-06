@@ -37,11 +37,11 @@ class APITool(BaseTool):
         } if self.api_key else {}
 
         # Replace URL variables with values from kwargs, raise error if not found
+        kwargs.update(self.static_kwargs or {})
         if len(set(self.url_variables) - set(kwargs.keys())) > 0:
             raise ValueError(f"URL variables {set(self.url_variables) - set(kwargs.keys())} not found in kwargs")
 
         url_to_use = copy(self.api_url)
-        kwargs.update(self.static_kwargs or {})
         for url_var in self.url_variables:
             url_to_use = url_to_use.replace(f"{{{url_var}}}", kwargs[url_var])
 
