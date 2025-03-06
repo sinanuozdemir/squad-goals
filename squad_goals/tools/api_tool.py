@@ -16,7 +16,7 @@ class APITool(BaseTool):
             name: str = "API Tool",
             api_method='POST',
             description: str = "This tool uses an API to get information",
-            static_kwargs: dict = None
+            static_kwargs: dict = None,
             **kwargs
     ):
         self.api_url = api_url
