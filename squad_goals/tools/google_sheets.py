@@ -65,7 +65,19 @@ class GoogleSpreadsheetTool(BaseTool):
             spreadsheetId=self.spreadsheet_id,
             range=range_name
         ).execute()
-        return result.get('values', [])
+        
+        # Extract the values and determine the range size
+        values = result.get('values', [])
+        start_cell, end_cell = range_name.split('!')[1].split(':')
+        start_row = int(''.join(filter(str.isdigit, start_cell)))
+        end_row = int(''.join(filter(str.isdigit, end_cell)))
+        range_length = end_row - start_row + 1
+        
+        # Append empty lists to match the length of the range
+        while len(values) < range_length:
+            values.append([])
+        
+        return values
 
     def get_sheet_data(self) -> List[List[str]]:
         """
@@ -79,6 +91,14 @@ class GoogleSpreadsheetTool(BaseTool):
         ).execute()
         return result.get('values', [])
 
+    def _col_index_to_letter(self, index: int) -> str:
+        ''' Convert a column index to a letter e.g. 1 -> A, 2 -> B, 26 -> Z, 27 -> AA, 30 -> AD'''
+        letter = ''
+        while index > 0:
+            letter = chr(65 + (index - 1) % 26) + letter
+            index = (index - 1) // 26
+        return letter
+
     def find_in_column(self, search_value: str, column_name: str) -> List[int]:
         """
         Searches for a value in a specific column and returns the row indices where found.
@@ -86,25 +106,37 @@ class GoogleSpreadsheetTool(BaseTool):
         :param column_name: The column header/name to search in
         :return: List of row indices where the value was found (0-based, excluding header row)
         """
-        data = self.get_sheet_data()
+        # Use describe_columns_and_rows to get headers
+        description = self.describe_columns_and_rows()
+        column_map = description.get('column_map', {})
+        num_rows = description.get('rows', 0)
+        
+        # Find the column index from the column map
+        try:
+            column_index = list(column_map.values()).index(column_name)
+        except ValueError:
+            raise ValueError(f"Column '{column_name}' not found in sheet headers")
+        
+        # Convert column index to letter using _col_index_to_letter
+        column_letter = self._col_index_to_letter(column_index + 1)  # +1 because _col_index_to_letter is 1-based
+        print(f'column_letter: {column_letter}')
+        
+        # Get all data from the sheet
+        range_name = f"{self.sheet_name}!{column_letter}{self.header_row + 1}:{column_letter}{num_rows}"
+        data = self.get_data_in_range(range_name)
+        print(f'data: {data}')
         if not data:
             return []
 
-        # Find the column index from the header row
-        headers = data[self.header_row or 0]
-        try:
-            column_index = headers.index(column_name)
-        except ValueError:
-            raise ValueError(f"Column '{column_name}' not found in sheet headers")
-
         # Search for the value in the specified column
         matches = []
-        for i, row in enumerate(data[1:], 1):  # Start from 1 to skip header row
-            if len(row) > column_index and row[column_index] == search_value:
+        for i, row in enumerate(data, 1):  # Start from 1 to skip header row
+            if search_value == '' and not row:
+                matches.append(i)
+            elif row and row[0] == search_value:
                 matches.append(i)
 
         return matches
-
     def describe_columns_and_rows(self) -> Dict:
         '''
         Describes the columns and rows in the sheet.
@@ -140,31 +172,30 @@ class GoogleSpreadsheetTool(BaseTool):
         ).execute()
         return result
 
-    def run(self, data: List[List[str]] = None, action: str = "append", **kwargs) -> Dict:
+    def run(self, action: str = "append_to_sheet", **kwargs) -> Dict:
         """
-        Runs various actions on the Google Spreadsheet.
-        "describe": Describes the columns and rows in the sheet. Use this to get the column names or just to understand the sheet.
-        "search": Searches for a value in a specific column and returns the row indices where found.
-        "append_to_sheet": Appends data to the end of the sheet.
-        "insert_into_cell": Inserts a value into a specific cell.
-        "get_data_in_range": Gets all data from a specific range.
-        :param data: List of lists, where each inner list represents a row.
-        :param action: The action to perform ("append_to_sheet", "search", "insert_into_cell", "get_data_in_range", or "describe")
-        :Additional arguments for specific actions
-            For action="describe":
-                - None
-            For action="search":
-                - search_value: The value to search for
-                - column_name: The column header/name to search in
-            For action="append_to_sheet":
-                - None
-            For action="insert_into_cell":
-                - value: The value to insert
-                - cell: The cell to insert the value into, e.g. "A1"
-            For action="get_data_in_range":
-                - range_name: The range to get data from, e.g. "Sheet1!A1:B2". For example if you need data from the 3rd column, you can use "Sheet1!A3:A"
-        :return: The response from the operation
+        Executes specified actions on the Google Spreadsheet.
+
+        :param action: The action to perform ("append_to_sheet", "search", "insert_into_cell", "get_data_in_range", "describe").
+        :Additional arguments for each specific action:
+            - "search": 
+                "search" will return the row indices where the search_value is found in the column_name.
+                Requires 'search_value' and 'column_name'. Example: {"action": "search", "search_value": "John", "column_name": "Name"}
+            - "append_to_sheet":
+                "append_to_sheet" will append the data to the end of the sheet.
+                Requires 'data'. Example: {"action": "append_to_sheet", "data": [["John", "Doe", "john.doe@example.com"], ["Jane", "Smith", "jane.smith@example.com"]]}
+            - "insert_into_cell": 
+                "insert_into_cell" will insert the value into the specified cell.
+                Requires 'value' and 'cell'. Example: {"action": "insert_into_cell", "value": "New Value", "cell": "A1"}
+            - "get_data_in_range": 
+                "get_data_in_range" will return the data in the specified range.
+                Requires 'range_name'. Example: {"action": "get_data_in_range", "range_name": "Sheet1!A1:B2"} or {"action": "get_data_in_range",    "range_name": "Contacts!A12:G28"}
+            - "describe": 
+                "describe" will return the number of columns and rows in the sheet.
+                No additional arguments. Example: {"action": "describe"}
+        :return: The result of the operation.
         """
+        data = kwargs.get('data')
         if action == "append_to_sheet":
             return self.append_data(data)
         elif action == "describe":
@@ -172,7 +203,7 @@ class GoogleSpreadsheetTool(BaseTool):
         elif action == "search":
             search_value = kwargs.get('search_value')
             column_name = kwargs.get('column_name')
-            if not search_value or not column_name:
+            if search_value is None or column_name is None:
                 raise ValueError("search_value and column_name are required for search action")
             matches = self.find_in_column(search_value, column_name)
             return {"matches": matches, "total_matches": len(matches)}
@@ -189,22 +220,3 @@ class GoogleSpreadsheetTool(BaseTool):
             return self.get_data_in_range(range_name)
         else:
             raise ValueError(f"Unknown action: {action}")
-
-    # method to add a list of data at a specific range
-    def add_data_at_range(self, data: List[List[str]], range_name: str):
-        """
-        Appends data to the end of the sheet.
-        :param data: List of lists, where each inner list represents a row.
-        :param range_name: The range to add the data to, e.g. "Sheet1!A1" or "Dashboard!A3" or "Sheet6!A1:B2"
-        """
-        body = {
-            'values': data
-        }
-        result = self.service.spreadsheets().values().append(
-            spreadsheetId=self.spreadsheet_id,
-            range=range_name,
-            valueInputOption="RAW",
-            insertDataOption="INSERT_ROWS",
-            body=body
-        ).execute()
-        return result

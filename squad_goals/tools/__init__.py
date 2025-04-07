@@ -1,4 +1,4 @@
-from .api_tool import APITool
+from .api_tool import APITool, ApolloTool
 from .base_tool import BaseTool, ReturnFinalAnswerTool
 from .catfish import ReversePhoneLookupTool
 from .firecrawl import FirecrawlSearchTool
