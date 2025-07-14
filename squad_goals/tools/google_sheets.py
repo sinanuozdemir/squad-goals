@@ -119,12 +119,10 @@ class GoogleSpreadsheetTool(BaseTool):
         
         # Convert column index to letter using _col_index_to_letter
         column_letter = self._col_index_to_letter(column_index + 1)  # +1 because _col_index_to_letter is 1-based
-        print(f'column_letter: {column_letter}')
         
         # Get all data from the sheet
         range_name = f"{self.sheet_name}!{column_letter}{self.header_row + 1}:{column_letter}{num_rows}"
         data = self.get_data_in_range(range_name)
-        print(f'data: {data}')
         if not data:
             return []
 
